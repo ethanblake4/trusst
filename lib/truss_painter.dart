@@ -175,7 +175,7 @@ class TrussPainter extends CustomPainter {
                 ((j.reactionAngle / math.pi) * 180).toStringAsFixed(2) +
                 "\nFrom " +
                 j.sumaround.toString()));
-        tp.paint(canvas, origin.translate(j.x * sc + 18, -j.y * sc - 14));
+        tp.paint(canvas, origin.translate(j.x * sc + 18, -j.y * sc + 14));
       }
 
       if (j.fx != null || j.fy != null) {

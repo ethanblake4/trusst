@@ -57,9 +57,9 @@ class Joint {
     return cachedConnectedTruss = _connectedFast.toList();
   }
 
-  int get forceAngle => exDir == AxisDirection.right
+  double get forceAngle => exDir == AxisDirection.right
       ? 0
-      : exDir == AxisDirection.up ? math.pi / 2 : exDir == AxisDirection.left ? math.pi : math.pi * (3 / 2);
+      : exDir == AxisDirection.up ? math.pi / 2.0 : exDir == AxisDirection.left ? math.pi : math.pi * (3.0 / 2.0);
 
   static num abs(num x) => x < 0 ? -x : x;
 
@@ -86,7 +86,7 @@ class Joint {
     if (axisDirectionToAxis(exDir ?? AxisDirection.down) == Axis.vertical)
       sign = x - j.x < 0 != (exDir == AxisDirection.down) ? -1 : 1;
     else
-      sign = x - j.y < 0 != (exDir == AxisDirection.left) ? 1 : -1;
+      sign = y - j.y < 0 != (exDir == AxisDirection.left) ? 1 : -1;
 
     return abs(p) * Offset(x - j.x, y - j.y).distance * sign;
   }

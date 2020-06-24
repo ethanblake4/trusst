@@ -30,7 +30,7 @@ class _ConstructAreaState extends State<ConstructArea> with SingleTickerProvider
   AnimationController _controller;
   Offset _lastGridPos;
   List<Truss> trusses;
-  double scale = 10;
+  double scale = 12;
   Offset origin = Offset(30, 180);
   Offset curVelocity = Offset.zero;
   int panHitId;
@@ -51,6 +51,7 @@ class _ConstructAreaState extends State<ConstructArea> with SingleTickerProvider
   }
 
   Widget build(BuildContext context) {
+    scale = 10;
     return GestureDetector(
       child: CustomPaint(
           painter: TrussPainter(

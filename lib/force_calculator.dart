@@ -36,6 +36,7 @@ class ForceCalculator {
       j.moment = null;
       j.reactionForce = 0;
       j.reactionAngle = 0;
+      j.sumaround = -1;
     });
 
     // Cache the All180 list of joints for each Joint, because it is slow to calculate
@@ -44,10 +45,8 @@ class ForceCalculator {
     /// =========================================================== ///
     /// ======== STEP 1: Calculate moment and reactions =========== ///
     /// =========================================================== ///
+    cstep = Joint.globalCalcStep++;
     while (iteration < (useFast ? (debugMode ? 5 : 45) : Joint.all.length * (debugMode ? 5 : 15)) && !complete) {
-      // Determines whether a joint has been calculated yet
-      cstep = Joint.globalCalcStep++;
-
       // Loop all the joints
       Joint.all.values.forEach((j) {
         // If the joint has not yet been calculated for this cycle
@@ -61,7 +60,7 @@ class ForceCalculator {
           if (cachedAll180Joint.containsKey(j.id))
             all180Joint = cachedAll180Joint[j.id];
           else {
-            var all180 = j.connectedTrusses.expand((t) => _findAll180(t, j));
+            final all180 = j.connectedTrusses.expand((t) => _findAll180(t, j));
             all180Joint =
                 all180.expand((t2) => [t2.startJoint, t2.endJoint]).toSet().where((j2) => j2.id != j.id).toList();
             cachedAll180Joint[j.id] = all180Joint;
@@ -73,7 +72,7 @@ class ForceCalculator {
           // These steps are combined for calculation efficiency
           var numUnknown = 0;
           j.moment = all180Joint.fold(0, (m, j3) {
-            if (j3.type != JointType.STANDARD && (j3.calcStep < cstep || j3.rCalcStep < cstep)) numUnknown++;
+            if (j3.type != JointType.STANDARD && (j3.rCalcStep < cstep || j3.calcStep < cstep)) numUnknown++;
             return m + j3.calcMomentOn(j);
           });
 
@@ -82,7 +81,7 @@ class ForceCalculator {
           // and calculate fast-path (Path 0) reaction sums
           if (numUnknown == 1 && j.type != JointType.STANDARD) {
             var unknowns = all180Joint
-                .where((j4) => j4.type != JointType.STANDARD && (j4.calcStep < cstep || j4.rCalcStep < cstep));
+                .where((j4) => j4.type != JointType.STANDARD && (j4.rCalcStep < cstep || j4.calcStep < cstep));
             var j6 = unknowns.first;
             var dist = Offset(j6.x - j.x, j6.y - j.y).distance;
             j6.reactionForce = -j.moment / dist;
@@ -99,15 +98,11 @@ class ForceCalculator {
             j6.fy = -math.sin(j6.reactionAngle) * abs(j6.reactionForce);
             j6.codepath = 0;
             j6.fCalcStep = cstep;
-            Joint.all[j6.id].rCalcStep = cstep;
+            j6.rCalcStep = cstep;
           }
 
           // Mark this joint as having been calculated
           j.calcStep = cstep;
-        }
-        if (j.fCalcStep < cstep) {
-          j.fx = null;
-          j.fy = null;
         }
       });
 
@@ -150,7 +145,8 @@ class ForceCalculator {
       Joint unknown;
       var numUnknowns = 0;
       double sumVertical = contiguousJoints.where((j) => j.type != JointType.ROLLER_V).fold(0.0, (v, j) {
-        if (abs((j.reactionForce ?? 0) * math.sin(j.reactionAngle)) <= 0.0001 && j.type != JointType.STANDARD) {
+        if (/*abs((j.reactionForce ?? 0) * math.sin(j.reactionAngle)) <= 0.0001*/ j.rCalcStep < cstep &&
+            j.type != JointType.STANDARD) {
           if (unknown == null) {
             unknown = j;
             numUnknowns = 1;
@@ -161,7 +157,7 @@ class ForceCalculator {
           }
         }
         return v +
-            (j.reactionForce * math.sin(j.reactionAngle)) +
+            (j.fy ?? 0) +
             (j.exAmount ?? 0) * (j.exDir == AxisDirection.up ? 1 : j.exDir == AxisDirection.down ? -1 : 0);
       });
       if (t0 % 30 == 0) print("$numUnknowns unknowns fy");
@@ -177,7 +173,8 @@ class ForceCalculator {
       numUnknowns = 0;
       unknown = null;
       var sumHorizontal = contiguousJoints.where((j) => j.type != JointType.ROLLER_H).fold(0, (v, j) {
-        if (abs((j.reactionForce ?? 0) * math.cos(j.reactionAngle)) <= 0.0001 && j.type != JointType.STANDARD) {
+        if (/*abs((j.reactionForce ?? 0) * math.cos(j.reactionAngle)) <= 0.0001*/ j.rCalcStep < cstep &&
+            j.type != JointType.STANDARD) {
           if (unknown == null) {
             unknown = j;
             numUnknowns = 1;
@@ -186,7 +183,7 @@ class ForceCalculator {
           return v;
         }
         return v +
-            (j.reactionForce * math.cos(j.reactionAngle)) +
+            (j.fx ?? 0) +
             (j.exAmount ?? 0) * (j.exDir == AxisDirection.right ? 1 : j.exDir == AxisDirection.left ? -1 : 0);
       });
 
@@ -212,14 +209,14 @@ class ForceCalculator {
 
   /// Finds all [Truss]es linked recursively to [t] at a 180 degree angle starting from the [Joint] opposite to [j]
   static Iterable<Truss> _findAll180(Truss t, Joint j) {
-    var connectsAtStart = t.startId == j.id;
-    var j180 = connectsAtStart
+    final connectsAtStart = t.startId == j.id;
+    final j180 = connectsAtStart
         ? t.endJoint.connectedTrusses.where((t2) =>
             t.dyDx.toStringAsFixed(3) == t2.dyDx.toStringAsFixed(3) && (t.startId != t2.startId || t.endId != t2.endId))
         : t.startJoint.connectedTrusses.where((t2) =>
             t.dyDx.toStringAsFixed(3) == t2.dyDx.toStringAsFixed(3) &&
             (t.startId != t2.startId || t.endId != t2.endId));
-    var ll = <Truss>[t];
+    final ll = <Truss>[t];
     if (j180.length == 0) return ll;
     ll.addAll(j180.toList().expand((t3) => _findAll180(t3, connectsAtStart ? t.endJoint : t.startJoint)));
     return ll;

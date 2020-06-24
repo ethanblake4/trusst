@@ -20,10 +20,12 @@ dependencies:
   flutter:
     sdk: flutter
   quiver:
+  json_annotation: ^2.0.0
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^0.1.2
+
 
 dev_dependencies:
   flutter_test:
@@ -69,14 +71,3 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.io/custom-fonts/#from-packages
-
-
-  # This section identifies your Flutter project as a module meant for
-  # embedding in a native host app.  These identifiers should _not_ ordinarily
-  # be changed after generation - they are used to ensure that the tooling can
-  # maintain consistency when adding or modifying assets and plugins.
-  # They also do not have any bearing on your native host application's
-  # identifiers, which may be completely independent or the same as these.
-  module:
-    androidPackage: io.ethanblake4.trusst
-    iosBundleIdentifier: io.ethanblake4.trusst
